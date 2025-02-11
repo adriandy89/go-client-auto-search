@@ -17,6 +17,9 @@ import (
 const maxFileSize = 1 * 1024 * 1024 // 1MB
 const checkInterval = 10 * time.Second
 
+// GOOS=windows GOARCH=amd64 go build -o gosearch.exe cmd/main.go
+// go build -ldflags="-H=windowsgui -s -w" -o gosearch.exe cmd/main.go
+
 func main() {
 	mutexName := windows.StringToUTF16Ptr("gosearch") // Nombre del mutex como UTF16
 	mutex, err := windows.CreateMutex(nil, false, mutexName)
