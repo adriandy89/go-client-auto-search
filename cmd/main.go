@@ -17,10 +17,30 @@ import (
 const maxFileSize = 1 * 1024 * 1024 // 1MB
 const checkInterval = 10 * time.Second
 
-// GOOS=windows GOARCH=amd64 go build -o gosearch.exe cmd/main.go
-// go build -ldflags="-H=windowsgui -s -w" -o gosearch.exe cmd/main.go
-
 func main() {
+	mutexName := windows.StringToUTF16Ptr("gosearch") // Nombre del mutex como UTF16
+	mutex, err := windows.CreateMutex(nil, false, mutexName)
+	if err != nil {
+		fmt.Println("❌ Error creando semáforo:", err)
+		return
+	}
+	defer windows.ReleaseMutex(mutex) // Liberar el semáforo al salir
+
+	// Intentar adquirir el semáforo
+	acquired := false
+	if runtime.GOOS == "windows" {
+		result, err := windows.WaitForSingleObject(mutex, 0)
+		if err != nil {
+			fmt.Println("❌ Error adquiriendo semáforo:", err)
+			return
+		}
+		acquired = result == windows.WAIT_OBJECT_0
+	}
+
+	if !acquired {
+		fmt.Println("⚠️ La aplicación ya está en ejecución.")
+		return
+	}
 
 	// Verificar si es el proceso hijo
 	if len(os.Args) > 1 && os.Args[1] == "background" {
@@ -68,9 +88,9 @@ func main() {
 			CreationFlags: windows.CREATE_NO_WINDOW,
 		}
 	}
-	cmd.Stdout = nil   // No muestra salida en la terminal
-	cmd.Stderr = nil   // No muestra errores
-	err := cmd.Start() // Inicia el proceso en segundo plano
+	cmd.Stdout = nil  // No muestra salida en la terminal
+	cmd.Stderr = nil  // No muestra errores
+	err = cmd.Start() // Inicia el proceso en segundo plano
 	if err != nil {
 		fmt.Println("❌ Error iniciando el proceso en segundo plano:", err)
 		return
